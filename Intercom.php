@@ -37,27 +37,27 @@ class Intercom
     /**
      * The Intercom API endpoint
      */
-    private $apiEndpoint = 'https://api.intercom.io/v1/';
+    protected $apiEndpoint = 'https://api.intercom.io/v1/';
 
     /**
      * The Intercom application ID
      */
-    private $appId = null;
+    protected $appId = null;
 
     /**
      * The Intercom API key
      */
-    private $apiKey = null;
+    protected $apiKey = null;
 
     /**
      * Last HTTP error obtained from curl_errno() and curl_error()
      */
-    private $lastError = null;
+    protected $lastError = null;
 
     /**
      * Whether we are in debug mode. This is set by the constructor
      */
-    private $debug = false;
+    protected $debug = false;
 
     /**
      * The constructor
@@ -82,7 +82,7 @@ class Intercom
      **/
     private function isEmail($value)
     {
-        return preg_match('/@/', $string);
+        return preg_match('/@/', $value);
     }
 
     /**
@@ -193,6 +193,7 @@ class Intercom
      * @param  long   $createdAt         UNIX timestamp describing the date and time when the user was created (optional)
      * @param  string $lastSeenIp        The last IP address where the user was last seen (optional)
      * @param  string $lastSeenUserAgent The last user agent of the user's browser (optional)
+     * @param  array  $companies         The list of companies to which our user belongs (optional)
      * @param  long   $lastRequestAt     UNIX timestamp of the user's last request (optional)
      * @param  string $method            HTTP method, to be used by updateUser()
      * @return object
@@ -204,6 +205,7 @@ class Intercom
                                $createdAt = null,
                                $lastSeenIp = null,
                                $lastSeenUserAgent = null,
+                               $companies = array(),
                                $lastRequestAt = null,
                                $method = 'POST')
     {
@@ -237,6 +239,10 @@ class Intercom
 
         if (!empty($customData)) {
             $data['custom_data'] = $customData;
+        }
+        
+        if (!empty($companies)) {
+            $data['companies'] = $companies;
         }
 
         $path = 'users';
