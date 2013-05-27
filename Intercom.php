@@ -93,7 +93,7 @@ class Intercom
      * @param  string $post_data The data to send on an HTTP POST (optional)
      * @return object
      **/
-    private function httpCall($url, $method = 'GET', $post_data = null)
+    protected function httpCall($url, $method = 'GET', $post_data = null)
     {
         $headers = array('Content-Type: application/json');
 

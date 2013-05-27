@@ -224,17 +224,18 @@ class Intercom_Api extends Intercom
         self::$bulkImportData[] = $data;
     }
     
+    /** 
+     * This method is not working for now because the api method on the server side is broken.
+     * there is actually no documentation for it.
+     */
     public static function bulkImport()
     {
-        $path = 'users/bulk_import';
+        $path = 'users/bulk_create';
         $res = self::$instance->httpCall(
             self::$instance->apiEndpoint . $path, 
             'POST', 
             json_encode(self::$bulkImportData)
         );
-        echo "\n";
-        var_dump(self::$instance->lastError);
-        echo "\n";
         self::$bulkImportData = array();
         return $res;
     }
