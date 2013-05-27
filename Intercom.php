@@ -58,6 +58,17 @@ class Intercom
      * Whether we are in debug mode. This is set by the constructor
      */
     protected $debug = false;
+    
+    /**
+     * Whether to send API call immediately or to use a cron job to send them
+     */
+    protected $delayed = false;
+    
+    /**
+     * If $delayed is true, write api calls data to this file 
+     * in order to be executed later.
+     */
+    protected $delayedCmdFile = '/tmp/intercom_delayed_commands';
 
     /**
      * The constructor
@@ -67,11 +78,12 @@ class Intercom
      * @param  string $debug  Optional debug flag
      * @return void
      **/
-    public function __construct($appId, $apiKey, $debug = false)
+    public function __construct($appId, $apiKey, $debug = false, $delayed = false)
     {
         $this->appId = $appId;
         $this->apiKey = $apiKey;
         $this->debug = $debug;
+        $this->delayed = $delayed;
     }
 
     /**
@@ -93,40 +105,55 @@ class Intercom
      * @param  string $post_data The data to send on an HTTP POST (optional)
      * @return object
      **/
-    protected function httpCall($url, $method = 'GET', $post_data = null)
+    protected function httpCall($url, $method = 'GET', $post_data = null, $forceRealtime = false)
     {
-        $headers = array('Content-Type: application/json');
-
-        $ch = curl_init($url);
-
-        if ($this->debug) {
-            curl_setopt($ch, CURLOPT_VERBOSE, true);
+        if(true === $forceRealtime || false === $this->delayed) {
+        
+            $headers = array('Content-Type: application/json');
+    
+            $ch = curl_init($url);
+    
+            if ($this->debug) {
+                curl_setopt($ch, CURLOPT_VERBOSE, true);
+            }
+    
+            if ($method == 'POST') {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+                curl_setopt($ch, CURLOPT_POST, true);
+            } elseif ($method == 'PUT') {
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+                $headers[] = 'Content-Length: ' . strlen($post_data);
+            } elseif ($method != 'GET') {
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+            }
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_BUFFERSIZE, 4096);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC); 
+            curl_setopt($ch, CURLOPT_USERPWD, $this->appId . ':' . $this->apiKey);
+    
+            $response = curl_exec($ch);
+    
+            // Set HTTP error, if any
+            $this->lastError = array('code' => curl_errno($ch), 'message' => curl_error($ch));
+    
+            return json_decode($response);
+        } else {
+            $line = $url . '|||' . $method . '|||' . $post_data;
+            try{
+                $fp = fopen($this->delayedCmdFile, "a");
+                if($fp) {
+                    fputs($fp, $line . "\n");
+                    fclose($fp);
+                }
+                return true;
+            } catch (Exception $e){
+                return false;
+            }
         }
-
-        if ($method == 'POST') {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            curl_setopt($ch, CURLOPT_POST, true);
-        } elseif ($method == 'PUT') {
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            $headers[] = 'Content-Length: ' . strlen($post_data);
-        } elseif ($method != 'GET') {
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        }
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_BUFFERSIZE, 4096);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC); 
-        curl_setopt($ch, CURLOPT_USERPWD, $this->appId . ':' . $this->apiKey);
-
-        $response = curl_exec($ch);
-
-        // Set HTTP error, if any
-        $this->lastError = array('code' => curl_errno($ch), 'message' => curl_error($ch));
-
-        return json_decode($response);
     }
 
     /**
@@ -144,7 +171,7 @@ class Intercom
             $path .= '&per_page=' . $perPage;
         }
 
-        return $this->httpCall($this->apiEndpoint . $path);
+        return $this->httpCall($this->apiEndpoint . $path, 'GET', null, true);
     }
 
     /**
@@ -162,7 +189,7 @@ class Intercom
             $path .= '?user_id=';
         }
         $path .= urlencode($id);
-        return $this->httpCall($this->apiEndpoint . $path);
+        return $this->httpCall($this->apiEndpoint . $path, 'GET', null, true);
     }
     
     /**
@@ -180,7 +207,7 @@ class Intercom
             $path .= '?user_id=';
         }
         $path .= urlencode($id);
-        return $this->httpCall($this->apiEndpoint . $path);
+        return $this->httpCall($this->apiEndpoint . $path, 'GET', null, true);
     }
 
     /**
@@ -335,6 +362,40 @@ class Intercom
      */
     public function getLastError()
     {
+        return $this->lastError;
+    }
+    
+    public function executeDelayed()
+    {
+        try {
+            $runningFileName = $this->delayedCmdFile . '_running';
+            rename($this->delayedCmdFile, $runningFileName);
+            
+            $fp = fopen($runningFileName, "r");
+            if($fp) {
+                while (!feof($fp)) {
+                    $query = fgets($fp);
+                    
+                    if ($query == false) {
+                        continue;
+                    }
+                    
+                    list($url, $method, $data) = explode('|||', $query);
+                    
+                    echo "sending call to " . $url . " \n";
+                    $res = $this->httpCall($url, $method, $data, true);
+                }
+                fclose($fp);
+            }
+            unlink($runningFileName);
+        } catch(Exception $e) {
+            $this->handle_delayed_error();
+        }
+    }
+    
+    public function handle_delayed_error()
+    {
+        $this->lastError = "An error occured when sending delayed calls";
         return $this->lastError;
     }
 }

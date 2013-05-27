@@ -7,18 +7,20 @@ class Intercom_Api extends Intercom
     
     static $bulkImportData = array();
     
-    public function __construct($appId, $apiKey, $debug = false)
+    public function __construct($appId, $apiKey, $debug = false, $delayed = false)
     {
-        parent::__construct($appId, $apiKey, $debug = false);
+        parent::__construct($appId, $apiKey, $debug, $delayed);
     }
     
-    public static function init($appId, $key)
+    public static function init($appId, $key, $debug = false, $delayed = false)
     {
 
         try {
             self::$instance = new self(
                 $appId,
-                $key
+                $key,
+                $debug,
+                $delayed
             );
             self::$instance->appId = $appId;
             self::$instance->apiKey = $key;
@@ -26,16 +28,14 @@ class Intercom_Api extends Intercom
             /**
              * @TODO : handle this correctly
              */
+            return false;
         }
     }
     
     public static function add($account, $plan, $lastRequestAt=null)
     {
         if(!self::$instance) {
-            self::$instance = new self(
-                self::$appId,
-                self::$key
-            );
+            return false;
         }
         try {            
             $data = array(
@@ -75,10 +75,7 @@ class Intercom_Api extends Intercom
     public static function update($account, $data=array(), $plan=null)
     {
         if(!self::$instance) {
-            self::$instance = new self(
-                self::$appId,
-                self::$key
-            );
+            return false;
         }
         try {
             $intercomUser = self::$instance->getUser($account->getId());
@@ -93,39 +90,39 @@ class Intercom_Api extends Intercom
                 $data["quota"] = $plan->getQuota();
             }
             
-            if(isset($data['created_alert'])) {
+            if(isset($data['created_alert']) && isset($intercomUser->custom_data->created_alert)) {
                 $data["created_alert"] += $intercomUser->custom_data->created_alert;
             }
             
-            if(isset($data['pluggued_social_account'])) {
+            if(isset($data['pluggued_social_account']) && isset($intercomUser->custom_data->pluggued_social_account)) {
                 $data["pluggued_social_account"] += $intercomUser->custom_data->pluggued_social_account;
             }
             
-            if(isset($data['received_shared_alert'])) {
+            if(isset($data['received_shared_alert']) && isset($intercomUser->custom_data->received_shared_alert)) {
                 $data["received_shared_alert"] += $intercomUser->custom_data->received_shared_alert;
             }
             
-            if(isset($data['has_sent_an_invite'])) {
+            if(isset($data['has_sent_an_invite']) && isset($intercomUser->custom_data->has_sent_an_invite)) {
                 $data["has_sent_an_invite"] += $intercomUser->custom_data->has_sent_an_invite;
             }
             
-            if(isset($data['downloaded_stats'])) {
+            if(isset($data['downloaded_stats']) && isset($intercomUser->custom_data->downloaded_stats)) {
                 $data["downloaded_stats"] += $intercomUser->custom_data->downloaded_stats;
             }
             
-            if(isset($data['shared_an_alert'])) {
+            if(isset($data['shared_an_alert']) && isset($intercomUser->custom_data->shared_an_alert)) {
                 $data["shared_an_alert"] += $intercomUser->custom_data->shared_an_alert;
             }
             
-            if(isset($data['read_mention'])) {
+            if(isset($data['read_mention']) && isset($intercomUser->custom_data->read_mention)) {
                 $data["read_mention"] += $intercomUser->custom_data->read_mention;
             }
             
-            if(isset($data['used_mention'])) {
+            if(isset($data['used_mention']) && isset($intercomUser->custom_data->used_mention)) {
                 $data["used_mention"] += $intercomUser->custom_data->used_mention;
             }
             
-            $res = $intercom->updateUser(
+            $res = self::$instance->updateUser(
                 $intercomUser->user_id,
                 $intercomUser->email,
                 $account->getName(),
@@ -238,5 +235,10 @@ class Intercom_Api extends Intercom
         );
         self::$bulkImportData = array();
         return $res;
+    }
+    
+    public static function send_delayed_calls()
+    {
+        $res = self::$instance->executeDelayed();
     }
 }
