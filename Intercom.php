@@ -368,11 +368,12 @@ class Intercom
     public function executeDelayed()
     {
         try {
-            $runningFileName = $this->delayedCmdFile . '_running';
+            $runningFileName = tempnam(sys_get_temp_dir(), "intercom");
             rename($this->delayedCmdFile, $runningFileName);
             
             $fp = fopen($runningFileName, "r");
             if($fp) {
+                $handled = 0; 
                 while (!feof($fp)) {
                     $query = fgets($fp);
                     
@@ -384,6 +385,11 @@ class Intercom
                     
                     echo "sending call to " . $url . " \n";
                     $res = $this->httpCall($url, $method, $data, true);
+                    $handled++;
+                    
+                    if($handled % 100 == 0){
+                        echo "Handled " . $handled . " lines \n";
+                    }
                 }
                 fclose($fp);
             }
