@@ -225,7 +225,7 @@ class Intercom
      * @param  string $method            HTTP method, to be used by updateUser()
      * @return object
      **/
-    public function createUser($id,
+    public function createUser($id = null,
                                $email = null,
                                $name = null,
                                $customData = array(),
@@ -238,8 +238,14 @@ class Intercom
     {
         $data = array();
 
-        $data['user_id'] = $id;
-
+        if(empty($id) && empty($email)) {
+            return false;
+        }
+        
+        if(!empty($id)) {
+            $data['user_id'] = $id;
+        }
+        
         if (!empty($email)) {
             $data['email'] = $email;
         }
@@ -289,16 +295,17 @@ class Intercom
      * @param  long   $lastRequestAt     UNIX timestamp of the user's last request (optional)
      * @return object
      **/
-    public function updateUser($id,
+    public function updateUser($id = null,
                                $email = null,
                                $name = null,
                                $customData = array(),
                                $createdAt = null,
                                $lastSeenIp = null,
                                $lastSeenUserAgent = null,
+                               $companies = array(),
                                $lastRequestAt = null)
     {
-        return $this->createUser($id, $email, $name, $customData, $createdAt, $lastSeenIp, $lastSeenUserAgent, $lastRequestAt, 'PUT');
+        return $this->createUser($id, $email, $name, $customData, $createdAt, $lastSeenIp, $lastSeenUserAgent, $companies, $lastRequestAt, 'PUT');
     }
 
     /**

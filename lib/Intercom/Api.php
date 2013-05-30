@@ -2,10 +2,21 @@
 require_once __DIR__.'/../../Intercom.php';
 
 class Intercom_Api extends Intercom
-{
+{   
     static $instance = null;
     
     static $bulkImportData = array();
+
+    static $incrementalFields = array(
+        'created_alert',
+        'Pluggued_social_account',
+        'received_shared_alert',
+        'has_sent_an_invite',
+        'downloaded_stats',
+        'shared_an_alert',
+        'read_mention',
+        'used_mention'
+    );
     
     public function __construct($appId, $apiKey, $debug = false, $delayed = false)
     {
@@ -39,11 +50,11 @@ class Intercom_Api extends Intercom
         }
         try {            
             $data = array(
-                "end_of_trial" => $account->getQuotaNextRenew()->getTimestamp(),
+                "end_of_trial" => $account->getCreatedAt()->getTimestamp() + (60*60*24*30),
                 "consumed_mentions" => $account->getMentionsUsed(),
                 "langue" => $account->getLanguageCode(),
                 "VIP" => $account->getFavorite(),
-                "plan" => $plan->getName(),
+                "actual_plan" => $plan->getName('en'),
                 "quota" => $plan->getQuota(),
                 "pluggued_social_account" => 0,
                 "received_shared_alert" => 0,
@@ -78,56 +89,63 @@ class Intercom_Api extends Intercom
             return false;
         }
         try {
-            $intercomUser = self::$instance->getUser($account->getId());
+            $intercomUser = self::$instance->getUser($account->getEmail());
             
-            $data["end_of_trial"] = $account->getQuotaNextRenew()->getTimestamp();
             $data["consumed_mentions"] = $account->getMentionsUsed();
             $data["langue"] = $account->getLanguageCode();
             $data["VIP"] = $account->getFavorite();
-            
+            $data['deleted_account'] = $account->isDeleted();
+            $quotaExceededAt = $account->getQuotaExceededAt();
+            if($quotaExceededAt) {
+                $quotaExceededAt = $quotaExceededAt->getTimestamp();
+            }
+            $data['exceeded_quota'] = $quotaExceededAt;
+            if(!isset($data['end_of_trial'])) {
+                $data['end_of_trial'] = $account->getCreatedAt()->getTimestamp() + (60*60*24*30);
+            }
             if($plan) {
-                $data["actual_plan"] = $plan->getName();
+                $data["actual_plan"] = $plan->getName('en');
                 $data["quota"] = $plan->getQuota();
             }
             
-            if(isset($data['created_alert']) && isset($intercomUser->custom_data->created_alert)) {
-                $data["created_alert"] += $intercomUser->custom_data->created_alert;
+            // If the user already exists on Intercom, then we need to increment the given fields,
+            // otherwise, we need to make sure all fields are initialized
+            if($intercomUser) {
+                foreach(self::$incrementalFields as $field) {
+                    
+                    // If the field is defined in Intercom, increment if needed, otherwise, set to what needed
+                    if(isset($intercomUser->custom_data->$field) && $intercomUser->custom_data->$field !== null) {
+                        
+                        // if a value is given for the field, increment by this value
+                        if(isset($data[$field])) {
+                            $data[$field] += $intercomUser->custom_data->$field;
+                        }
+                    } else {
+                        
+                        // if no value is given for the field, set to 0
+                        if(!isset($data[$field])) {
+                            $data[$field] = 0;
+                        }
+                    }
+                }
+            } else {
+                foreach(self::$incrementalFields as $field) {
+                    if(!isset($data[$field])) {
+                        $data[$field] = 0;
+                    }
+                }
             }
-            
-            if(isset($data['pluggued_social_account']) && isset($intercomUser->custom_data->pluggued_social_account)) {
-                $data["pluggued_social_account"] += $intercomUser->custom_data->pluggued_social_account;
-            }
-            
-            if(isset($data['received_shared_alert']) && isset($intercomUser->custom_data->received_shared_alert)) {
-                $data["received_shared_alert"] += $intercomUser->custom_data->received_shared_alert;
-            }
-            
-            if(isset($data['has_sent_an_invite']) && isset($intercomUser->custom_data->has_sent_an_invite)) {
-                $data["has_sent_an_invite"] += $intercomUser->custom_data->has_sent_an_invite;
-            }
-            
-            if(isset($data['downloaded_stats']) && isset($intercomUser->custom_data->downloaded_stats)) {
-                $data["downloaded_stats"] += $intercomUser->custom_data->downloaded_stats;
-            }
-            
-            if(isset($data['shared_an_alert']) && isset($intercomUser->custom_data->shared_an_alert)) {
-                $data["shared_an_alert"] += $intercomUser->custom_data->shared_an_alert;
-            }
-            
-            if(isset($data['read_mention']) && isset($intercomUser->custom_data->read_mention)) {
-                $data["read_mention"] += $intercomUser->custom_data->read_mention;
-            }
-            
-            if(isset($data['used_mention']) && isset($intercomUser->custom_data->used_mention)) {
-                $data["used_mention"] += $intercomUser->custom_data->used_mention;
-            }
-            
+
             $res = self::$instance->updateUser(
-                $intercomUser->user_id,
-                $intercomUser->email,
+                null,
+                $account->getEmail(),
                 $account->getName(),
                 $data,
-                $account->getCreatedAt()->getTimestamp()
+                $account->getCreatedAt()->getTimestamp(),
+                null, 
+                null, 
+                array(),
+                time()
             );
             return $res;
         } catch(Exception $e) {
