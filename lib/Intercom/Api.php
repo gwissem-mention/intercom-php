@@ -128,7 +128,11 @@ class Intercom_Api extends Intercom
                         
                         // if a value is given for the field, increment by this value
                         if(isset($data[$field])) {
-                            $data[$field] += $intercomUser->custom_data->$field;
+                            
+                            //first check if increment mode is enabled
+                            if(true === self::isIncrementModeEnabled()) {
+                                $data[$field] += $intercomUser->custom_data->$field;
+                            }
                         }
                     } else {
                         
@@ -249,6 +253,11 @@ class Intercom_Api extends Intercom
         self::$bulkImportData[] = $data;
     }
     
+    public static function getUsersByPage($page, $perPage)
+    {
+        return self::$instance->getAllUsers($page, $perPage);
+    }
+    
     /** 
      * This method is not working for now because the api method on the server side is broken.
      * there is actually no documentation for it.
@@ -268,5 +277,35 @@ class Intercom_Api extends Intercom
     public static function send_delayed_calls()
     {
         $res = self::$instance->executeDelayed();
+    }
+    
+    public static function enableDelayedMode()
+    {
+        self::$instance->setDelayed(true);
+    }
+    
+    public static function disableDelayedMode()
+    {
+        self::$instance->setDelayed(false);
+    }
+    
+    public static function isDelayedModeEnabled()
+    {
+        return self::$instance->getDelayed();
+    }
+    
+    public static function enableEncrementMode()
+    {
+        self::$instance->setIncrementMode(true);
+    }
+    
+    public static function disableIncrementMode()
+    {
+        self::$instance->setIncrementMode(false);
+    }
+    
+    public static function isIncrementModeEnabled()
+    {
+        return self::$instance->getIncrementMode();
     }
 }

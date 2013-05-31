@@ -69,6 +69,16 @@ class Intercom
      * in order to be executed later.
      */
     protected $delayedCmdFile = '/tmp/intercom_delayed_commands';
+    
+    /**
+     * This option est used to allow mass reseting of users different values
+     * during tests or when changing the behaviour of some field.
+     * If set to true, increments the fields on intercom by given values.
+     * If set to false, then sets the fields on intercom to given values.
+     * Default to true.
+     * @var boolean
+     */
+    protected $incrementMode = true;
 
     /**
      * The constructor
@@ -410,6 +420,26 @@ class Intercom
     {
         $this->lastError = "An error occured when sending delayed calls";
         return $this->lastError;
+    }
+    
+    public function setDelayed($delayed)
+    {
+        $this->delayed = $delayed;
+    }
+    
+    public function getDelayed()
+    {
+        return $this->delayed;
+    }
+    
+    public function setIncrementMode($value)
+    {
+        $this->incrementMode = $value;
+    }
+    
+    public function getIncrementMode()
+    {
+        return $this->incrementMode;
     }
 }
 ?>
