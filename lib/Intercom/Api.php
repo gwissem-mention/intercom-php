@@ -95,6 +95,8 @@ class Intercom_Api extends Intercom
             $data["langue"] = $account->getLanguageCode();
             $data["VIP"] = $account->getFavorite();
             $data['deleted_account'] = $account->isDeleted();
+            $data['given_company'] = $account->getCompanyName();
+            
             $quotaExceededAt = $account->getQuotaExceededAt();
             if($quotaExceededAt) {
                 $quotaExceededAt = $quotaExceededAt->getTimestamp();
