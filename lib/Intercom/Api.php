@@ -43,7 +43,7 @@ class Intercom_Api extends Intercom
         }
     }
     
-    public static function add($account, $plan, $lastRequestAt=null)
+    public static function add($account, $plan, $lastRequestAt=null, $companies = array())
     {
         if(!self::$instance) {
             return false;
@@ -74,7 +74,7 @@ class Intercom_Api extends Intercom
                 $account->getCreatedAt()->getTimestamp(),
                 null, 
                 null,
-                array(),
+                $companies,
                 $lastRequestAt
             );
             return $res;
@@ -106,6 +106,13 @@ class Intercom_Api extends Intercom
             if($plan) {
                 $data["actual_plan"] = $plan->getName('en');
                 $data["quota"] = $plan->getQuota();
+            }
+            
+            if(isset($data['companies'])) {
+                $companies = $data['companies'];
+                unset($data['companies']);
+            } else {
+                $companies = array();
             }
             
             // If the user already exists on Intercom, then we need to increment the given fields,
@@ -144,7 +151,7 @@ class Intercom_Api extends Intercom
                 $account->getCreatedAt()->getTimestamp(),
                 null, 
                 null, 
-                array(),
+                $companies,
                 time()
             );
             return $res;
