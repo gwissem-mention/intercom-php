@@ -96,6 +96,7 @@ class Intercom_Api extends Intercom
             $data["VIP"] = $account->getFavorite();
             $data['deleted_account'] = $account->isDeleted();
             $data['given_company'] = $account->getCompanyName();
+            $data['phone'] = $account->getPhoneWithGuessedPrefix();
             
             $quotaExceededAt = $account->getQuotaExceededAt();
             if($quotaExceededAt) {
