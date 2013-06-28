@@ -54,15 +54,16 @@ class Intercom_Api extends Intercom
                 "consumed_mentions" => $account->getMentionsUsed(),
                 "langue" => $account->getLanguageCode(),
                 "VIP" => $account->getFavorite(),
-                "actual_plan" => $plan->getName('en'),
+                "actual_plan" => $plan->getCode(),
                 "quota" => $plan->getQuota(),
                 "pluggued_social_account" => 0,
                 "received_shared_alert" => 0,
-                "deleted_account" => false,
+                "deleted_account" => null,
                 "has_sent_an_invite" => 0,
                 "downloaded_stats" => 0,
                 "shared_an_alert" => 0,
                 "created_alert" => 0,
+                "downgraded" => null,
                 "read_mention" => 0,
                 "used_mention" => 1
             );
@@ -94,7 +95,6 @@ class Intercom_Api extends Intercom
             $data["consumed_mentions"] = $account->getMentionsUsed();
             $data["langue"] = $account->getLanguageCode();
             $data["VIP"] = $account->getFavorite();
-            $data['deleted_account'] = $account->isDeleted();
             $data['given_company'] = $account->getCompanyName();
             $data['phone'] = $account->getPhoneWithGuessedPrefix();
             
@@ -103,11 +103,14 @@ class Intercom_Api extends Intercom
                 $quotaExceededAt = $quotaExceededAt->getTimestamp();
             }
             $data['exceeded_quota'] = $quotaExceededAt;
+            if(!isset($data['deleted_account'])) {
+                $data['deleted_account'] = $account->getDeletedAt();
+            }
             if(!isset($data['end_of_trial'])) {
                 $data['end_of_trial'] = $account->getCreatedAt()->getTimestamp() + (60*60*24*30);
             }
             if($plan) {
-                $data["actual_plan"] = $plan->getName('en');
+                $data["actual_plan"] = $plan->getCode();
                 $data["quota"] = $plan->getQuota();
             }
             
