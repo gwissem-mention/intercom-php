@@ -5,6 +5,8 @@ class Intercom_Api extends Intercom
 {   
     static $instance = null;
     
+    static $enabled = null;
+    
     static $bulkImportData = array();
 
     static $incrementalFields = array(
@@ -18,23 +20,25 @@ class Intercom_Api extends Intercom
         'used_mention'
     );
     
-    public function __construct($appId, $apiKey, $debug = false, $delayed = false)
+    public function __construct($appId, $apiKey, $enabled, $debug = false, $delayed = false)
     {
         parent::__construct($appId, $apiKey, $debug, $delayed);
     }
     
-    public static function init($appId, $key, $debug = false, $delayed = false)
+    public static function init($appId, $key, $enabled, $debug = false, $delayed = false)
     {
 
         try {
             self::$instance = new self(
                 $appId,
                 $key,
+                $enabled,
                 $debug,
                 $delayed
             );
             self::$instance->appId = $appId;
             self::$instance->apiKey = $key;
+            self::$enabled = $enabled;
         } catch(Exception $e) {
             /**
              * @TODO : handle this correctly
@@ -47,6 +51,9 @@ class Intercom_Api extends Intercom
     {
         if(!self::$instance) {
             return false;
+        }
+        if(false == self::$enabled) {
+            return true;
         }
         try {            
             $data = array(
@@ -88,6 +95,9 @@ class Intercom_Api extends Intercom
     {
         if(!self::$instance) {
             return false;
+        }
+        if(false == self::$enabled) {
+            return true;
         }
         try {
             $intercomUser = self::$instance->getUser($account->getEmail());
@@ -185,6 +195,9 @@ class Intercom_Api extends Intercom
                 self::$key
             );
         }
+        if(false == self::$enabled) {
+            return true;
+        }
         try {
             $res = self::$instance->createUser(
                 $account->getId(),
@@ -209,7 +222,12 @@ class Intercom_Api extends Intercom
      */
     public static function deleteAllUsers()
     {
-    if(!self::$instance) {
+    
+        if(false == self::$enabled) {
+            return true;
+        }
+        
+        if(!self::$instance) {
             self::$instance = new self(
                             self::$appId,
                             self::$key
@@ -230,6 +248,10 @@ class Intercom_Api extends Intercom
     
     public static function delete($email)
     {
+        if(false == self::$enabled) {
+            return true;
+        }
+        
         self::$instance->deleteUser($email);
     }
     
@@ -258,6 +280,10 @@ class Intercom_Api extends Intercom
     
     public static function getUsersByPage($page, $perPage)
     {
+        if(false == self::$enabled) {
+            return true;
+        }
+        
         return self::$instance->getAllUsers($page, $perPage);
     }
     
@@ -267,6 +293,10 @@ class Intercom_Api extends Intercom
      */
     public static function bulkImport()
     {
+        if(false == self::$enabled) {
+            return true;
+        }
+        
         $path = 'users/bulk_create';
         $res = self::$instance->httpCall(
             self::$instance->apiEndpoint . $path, 
@@ -279,6 +309,10 @@ class Intercom_Api extends Intercom
     
     public static function send_delayed_calls()
     {
+        if(false == self::$enabled) {
+            return true;
+        }
+        
         $res = self::$instance->executeDelayed();
     }
     
