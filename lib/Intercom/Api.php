@@ -101,6 +101,10 @@ class Intercom_Api extends Intercom
         }
         try {
             $intercomUser = self::$instance->getUser($account->getEmail());
+            $curlError = self::$instance->getLastError();
+            if(isset($curlError['code']) && $curlError['code'] > 0){
+                return false;
+            }
             
             $data["consumed_mentions"] = $account->getMentionsUsed();
             $data["langue"] = $account->getLanguageCode();

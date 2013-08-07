@@ -141,7 +141,7 @@ class Intercom
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_BUFFERSIZE, 4096);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC); 
             curl_setopt($ch, CURLOPT_USERPWD, $this->appId . ':' . $this->apiKey);
     
@@ -379,7 +379,9 @@ class Intercom
      */
     public function getLastError()
     {
-        return $this->lastError;
+        $error = $this->lastError;
+        $this->lastError = null;
+        return $error;
     }
     
     public function executeDelayed()
