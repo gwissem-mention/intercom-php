@@ -10,7 +10,6 @@ class Intercom_Api extends Intercom
     static $bulkImportData = array();
 
     static $incrementalFields = array(
-        'created_alert',
         'Pluggued_social_account',
         'received_shared_alert',
         'has_sent_an_invite',
@@ -55,7 +54,8 @@ class Intercom_Api extends Intercom
         if(false == self::$enabled) {
             return true;
         }
-        try {            
+        try {        
+            $teamMembers = ($account->getTeamAccount()) ? count($account->getTeamAccount()->getTeamMembers()) : 0; 
             $data = array(
                 "end_of_trial" => $account->getCreatedAt()->getTimestamp() + (60*60*24*30),
                 "consumed_mentions" => $account->getMentionsUsed(),
@@ -69,10 +69,11 @@ class Intercom_Api extends Intercom
                 "has_sent_an_invite" => 0,
                 "downloaded_stats" => 0,
                 "shared_an_alert" => 0,
-                "created_alert" => 0,
+                "created_alert" => count($account->getUserAlerts()),
                 "downgraded" => null,
                 "read_mention" => 0,
-                "used_mention" => 1
+                "used_mention" => 1,
+                "team_members" => $teamMembers,
             );
             $res = self::$instance->createUser(
                 $account->getId(),
@@ -113,6 +114,12 @@ class Intercom_Api extends Intercom
                 $quotaExceededAt = $quotaExceededAt->getTimestamp();
             }
             $data['exceeded_quota'] = $quotaExceededAt;
+            if(!isset($data['created_alert'])) {
+                $data['created_alert'] = count($account->getUserAlerts());
+            }
+            if(!isset($data['team_members'])) {
+                $data['team_members'] = ($account->getTeamAccount()) ? count($account->getTeamAccount()->getTeamMembers()) : 0;
+            }
             if(!isset($data['deleted_account'])) {
                 $data['deleted_account'] = $account->getDeletedAt();
             }
